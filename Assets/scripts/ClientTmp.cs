@@ -8,7 +8,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
-public class Client : MonoBehaviour
+public class ClientTmp : MonoBehaviour
 {
 	public String host = "127.0.0.1";
     public Int32 port = 50000;

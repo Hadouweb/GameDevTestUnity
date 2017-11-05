@@ -8,7 +8,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Net.NetworkInformation;
 
-public class Server : MonoBehaviour
+public class ServerTmp : MonoBehaviour
 {
 
     public int port = 13000;
