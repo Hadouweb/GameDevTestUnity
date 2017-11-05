@@ -3,81 +3,82 @@ using System.Collections;
 using System;
 using System.IO;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
-using System.Threading;   
+using System.Net.Sockets;
+using System.Threading;
+using System.Net.NetworkInformation;
 
-public class Server : MonoBehaviour {                                                                                                                                                                                                                                                                            
-    Thread receiveThread; 
-    UdpClient client; 
-    public int port = 50000;  
-    string strReceiveUDP="";
-    string LocalIP = String.Empty;
-    string hostname;
+public class Server : MonoBehaviour
+{
 
-    public void Start()
+    public int port = 13000;
+    
+    private bool mRunning;
+    private IPAddress ipAddress;
+    string msg = "";
+    Thread mThread;
+    TcpListener tcp_Listener = null;
+    
+    void Start()
     {
-        Application.runInBackground = true;
-        init();	
-    }
-
-    public void Update()
-    {
-        Debug.Log("Receive: " + UDPGetPacket());
+        IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
+        foreach (IPAddress addr in localIPs)
+        {
+            if (addr.AddressFamily == AddressFamily.InterNetwork)
+            {
+                ipAddress = addr;
+                Debug.Log(ipAddress);
+            }
+        }
+        mRunning = true;
+        ThreadStart ts = new ThreadStart(SayHello);
+        mThread = new Thread(ts);
+        mThread.Start();
+        Debug.Log("Thread done...");
     }
     
-    // init
-    private void init()
+    public void stopListening()
     {
-        receiveThread = new Thread(ReceiveData);
-        receiveThread.IsBackground = true;
-        receiveThread.Start();
-        hostname = "localhost";
-        IPAddress[] ips = Dns.GetHostAddresses(hostname);
-        if (ips.Length > 0)
-        {
-            LocalIP = ips[0].ToString();
-        }
-        Debug.Log(LocalIP);
+        mRunning = false;
     }
-
-    void OnGUI()
+    
+    void SayHello()
     {
-        Rect rectObj = new Rect(10, 10, 400, 200);
-        GUIStyle style = new GUIStyle();
-        style.alignment = TextAnchor.UpperLeft;
-        GUI.Box(rectObj, hostname + " MY IP : " + LocalIP + " : " + strReceiveUDP, style);
-    }
-
-    private  void ReceiveData() 
-    {
-        client = new UdpClient(port);
-        while (true) 
+        try
         {
-            try 
+            IPAddress localAddr = IPAddress.Parse("127.0.0.1");
+           
+            // TcpListener server = new TcpListener(port);
+            tcp_Listener = new TcpListener(localAddr, port);
+            tcp_Listener.Start();
+            Debug.Log("Server Start");
+            while (mRunning)
             {
-                IPEndPoint anyIP = new IPEndPoint(IPAddress.Broadcast, port);
-                //IPEndPoint anyIP = new IPEndPoint(IPAddress.Any, 0);
-                byte[] data = client.Receive(ref anyIP);
-                string text = Encoding.UTF8.GetString(data);
-                strReceiveUDP = text;
-                Debug.Log(strReceiveUDP);
-            }
-            catch (Exception err) 
-            {
-                print(err.ToString());
+                TcpClient client = tcp_Listener.AcceptTcpClient();
+                NetworkStream ns = client.GetStream();
+                StreamReader reader = new StreamReader(ns);
+                msg = reader.ReadLine();
+                Debug.Log(msg);
+                reader.Close();
+                client.Close();
             }
         }
+        catch (ThreadAbortException e)
+        {
+            Debug.Log(e);
+        }
+        finally
+        {
+            mRunning = false;
+            tcp_Listener.Stop();
+        }
+    }
+    void OnApplicationQuit()
+    {
+        // stop listening thread
+        stopListening();
+        // wait fpr listening thread to terminate (max. 500ms)
+        mThread.Join(500);
     }
 
-    public string UDPGetPacket()
-    {
-        return strReceiveUDP;
-    }
-
-    void OnDisable()
-    {
-        if ( receiveThread!= null)	receiveThread.Abort();
-        client.Close();
-    }                                                                                                                                                                
-}                                                                                                  
+}
