@@ -67,6 +67,13 @@ public class Server : MonoBehaviour
 
     private void OnIncomingData(ServerClient client, string data)
     {
+        if (data.Contains("&NAME"))
+        {
+            client.clientName = data.Split('|')[1];
+            Broadcast(client.clientName + " has connected!", clients);
+            return;
+        }
+        
         Broadcast(data, clients);
     }
 
@@ -121,7 +128,10 @@ public class Server : MonoBehaviour
         clients.Add(new ServerClient(listener.EndAcceptTcpClient(ar)));
         StartListening();
         
-        Broadcast(clients[clients.Count- 1].clientName + " has connected", clients);
+        Broadcast("%NAME", new List<ServerClient>()
+        {
+            clients[clients.Count - 1]
+        });
     }
 }
 

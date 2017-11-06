@@ -10,6 +10,7 @@ public class Client : MonoBehaviour
 {
     public GameObject chatContainer;
     public GameObject messagePrefab;
+    public string clientName;
     
     private bool socketReady;
     private TcpClient socket;
@@ -63,6 +64,12 @@ public class Client : MonoBehaviour
 
     private void OnIncomingData(string data)
     {
+        if (data == "%NAME")
+        {
+            Send("&NAME|" + clientName);
+            return;
+        }
+        
         GameObject go = Instantiate(messagePrefab, chatContainer.transform);
         go.GetComponentInChildren<Text>().text = data;
     }
@@ -80,5 +87,25 @@ public class Client : MonoBehaviour
     {
         string message = GameObject.Find("SendInput").GetComponent<InputField>().text;
         Send(message);
+    }
+
+    private void CloseSocket()
+    {
+        if (!socketReady)
+            return;
+        writer.Close();
+        reader.Close();
+        socket.Close();
+        socketReady = false;
+    }
+
+    private void OnApplicationQuit()
+    {
+        CloseSocket();
+    }
+
+    private void OnDisable()
+    {
+        CloseSocket();
     }
 }
